@@ -11,14 +11,14 @@ public class MainViewController: UIViewController {
     }()
     
     private lazy var firstKeysCV: UICollectionView = {
-        return turnToKeyCV(vc: self, tag: 1000, CellClass: KeyCollectionViewCell.self)
+        return turnToKeyCV(vc: self, tag: 1000, CellClass: KeyCollectionViewCell.self, direction: .horizontal, spacing: 4, topInset: 0)
     }()
     private lazy var firstNotesCV: UICollectionView = {
-        return turnToKeyCV(vc: self, tag: 1002, CellClass: TitleCollectionViewCell.self)
+        return turnToKeyCV(vc: self, tag: 1002, CellClass: TitleCollectionViewCell.self, direction: .horizontal, spacing: 4, topInset: 0)
     }()
     private lazy var firstOpenNoteLbl: UILabel = {
         let label = UILabel()
-        label.turnToStateLabel(Content.firstOpenNote, view: view, size: 0.04)
+        label.turnToStateLabel(Content.firstOpenNote, font: view.frame.height * 0.04)
         return label
     }()
     private lazy var firstString: UIImageView = {
@@ -28,14 +28,14 @@ public class MainViewController: UIViewController {
     }()
     
     private lazy var secondKeysCV: UICollectionView = {
-        return turnToKeyCV(vc: self, tag: 1001, CellClass: KeyCollectionViewCell.self)
+        return turnToKeyCV(vc: self, tag: 1001, CellClass: KeyCollectionViewCell.self, direction: .horizontal, spacing: 4, topInset: 0)
     }()
     private lazy var secondNotesCV: UICollectionView = {
-        return turnToKeyCV(vc: self, tag: 1003, CellClass: TitleCollectionViewCell.self)
+        return turnToKeyCV(vc: self, tag: 1003, CellClass: TitleCollectionViewCell.self, direction: .horizontal, spacing: 4, topInset: 0)
     }()
     private lazy var secondOpenNoteLbl: UILabel = {
         let label = UILabel()
-        label.turnToStateLabel(Content.secondOpenNote, view: view, size: 0.04)
+        label.turnToStateLabel(Content.secondOpenNote, font: view.frame.height * 0.04)
         return label
     }()
     private lazy var secondString: UIImageView = {
@@ -45,44 +45,37 @@ public class MainViewController: UIViewController {
     }()
     
     private lazy var dotsCV: UICollectionView = {
-        return turnToKeyCV(vc: self, tag: 1004, CellClass: DotCollectionViewCell.self)
+        return turnToKeyCV(vc: self, tag: 1004, CellClass: DotCollectionViewCell.self, direction: .horizontal, spacing: 4, topInset: 0)
     }()
     private lazy var openKeyView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         return view
     }()
-
-    private lazy var dombraImageView: UIImageView = {
-        let image = UIImage(named: "dombra")
-        let iv = UIImageView(image: image)
-        iv.contentMode = .scaleAspectFit
-        return iv
-    }()
-    private lazy var dombraSwitch: UISwitch = {
-        let s = UISwitch()
-        s.turnToMainVCSwitches(isOn: true, target: self, action: #selector(rotateDombra))
-        return s
-    }()
+    
     private lazy var keysHidingSwitch: UISwitch = {
         let s = UISwitch()
-        s.turnToMainVCSwitches(isOn: false, target: self, action: #selector(hideOrUnhideKeys))
+        s.isOn = false
+        s.addTarget(self, action: #selector(hideOrUnhideKeys), for: .valueChanged)
         return s
-    }()
-    private lazy var dombraStateLabel: UILabel = {
-        let lbl = UILabel()
-        lbl.turnToStateLabel("Right-handed dombra", view: self.view, size: 0.04)
-        return lbl
     }()
     private lazy var keysStateLabel: UILabel = {
         let lbl = UILabel()
-        lbl.turnToStateLabel("Hide the dombra keys", view: self.view, size: 0.04)
+        lbl.turnToStateLabel("Hide the dombra keys", font: self.view.frame.height * 0.04)
         return lbl
     }()
-
-    private lazy var metronomeButton: UIButton = {
+    
+    private lazy var metronomeLabel: UILabel = {
+        let lbl = UILabel()
+        lbl.turnToStateLabel("Metronome", font: self.view.frame.height * 0.06)
+        return lbl
+    }()
+    private lazy var containerView: ContainerView = {
+        return ContainerView(frame: CGRect(x: 0, y: 0, width: 0, height: view.frame.height * 0.1))
+    }()
+    private lazy var playButton: UIButton = {
         let btn = UIButton()
-        btn.configureButton(with: "metronomeDefault", target: self, and: #selector(toggleMetronome))
+        btn.configureButton(with: "play", target: self, and: #selector(toggleMetronome))
         return btn
     }()
     private lazy var plusButton: UIButton = {
@@ -98,14 +91,12 @@ public class MainViewController: UIViewController {
     }()
     private lazy var tempoStateLbl: UILabel = {
         let lbl = UILabel()
-        lbl.turnToStateLabel("Grave", view: self.view, size: 0.05)
+        lbl.turnToStateLabel("Grave", font: view.frame.height * 0.05)
         return lbl
     }()
-
-    private lazy var guideButton: UIButton = {
-        let btn = UIButton()
-        btn.configureButton(with: "question", target: self, and: #selector(showGuide))
-        return btn
+    
+    private lazy var iconsCV: UICollectionView = {
+        return turnToKeyCV(vc: self, tag: 1005, CellClass: ImageCollectionViewCell.self, direction: .vertical, spacing: 20, topInset: 20)
     }()
     
     private lazy var firstOpenKeyHighlight: UIView = {
@@ -120,10 +111,11 @@ public class MainViewController: UIViewController {
         v.backgroundColor = Content.highlightColor
         return v
     }()
-
-    private var metronomeTimer: Timer?
+    
+    private var icons = ["question"]
+    
     private var animationTimer: Timer?
-
+    
     private var currentTempo = "Grave" {
         didSet {
             tempoStateLbl.text = currentTempo
@@ -132,22 +124,24 @@ public class MainViewController: UIViewController {
     private var tempoIndex = 0
     private var isMetronomeTurnedOn = false
     private var isRight = false
+        
     
-
     // MARK:- View Lifecycle
-    override public func viewDidLoad() {
+    public override func viewDidLoad() {
         super.viewDidLoad()
         backgroundImageView.turnToBackground(view, image: "wood")
-
+        
         // the layout methods are in the extension
         addSubviews()
         setAutoresizingToFalse()
         activateConstraints()
         
+        containerView.setupLayout(playButton)
+        
         addGesturesToOpenKey()
     }
-
-    override public func viewWillAppear(_ animated: Bool) {
+    
+    public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         AudioPlayer.backgroundAudioPlayer.stop()
     }
@@ -160,25 +154,14 @@ public class MainViewController: UIViewController {
         
         let upSwipe = UISwipeGestureRecognizer(target: self, action: #selector(playBothStrings))
         upSwipe.direction = .up
-
+        
         openKeyView.addGestureRecognizer(touch)
         openKeyView.addGestureRecognizer(downSwipe)
         openKeyView.addGestureRecognizer(upSwipe)
     }
-
-
+    
+    
     // MARK:- Switches
-    @objc
-    private func rotateDombra() {
-        if dombraSwitch.isOn {
-            dombraImageView.transform = CGAffineTransform(rotationAngle: 2 * CGFloat.pi)
-            dombraStateLabel.text = "Right-handed dombra"
-        } else {
-            dombraImageView.transform = CGAffineTransform(rotationAngle: CGFloat.pi)
-            dombraStateLabel.text = "Left-handed dombra"
-        }
-    }
-
     @objc
     private func hideOrUnhideKeys() {
         if keysHidingSwitch.isOn {
@@ -189,43 +172,45 @@ public class MainViewController: UIViewController {
         firstKeysCV.reloadData()
         secondKeysCV.reloadData()
     }
-
-
+    
+    
     // MARK:- Metronome functionality
     @objc
     private func toggleMetronome() {
         isMetronomeTurnedOn = !isMetronomeTurnedOn
         guard isMetronomeTurnedOn else {
+            playButton.setImage(UIImage(named: "play"), for: .normal)
             stopMetronome()
             return
         }
+        playButton.setImage(UIImage(named: "stop"), for: .normal)
         runMetronome()
     }
     
     private func runMetronome() {
         animationTimer = Timer.scheduledTimer(timeInterval: Content.tempos[currentTempo]! * 0.5, target: self, selector: #selector(updateState), userInfo: nil, repeats: true)
     }
-
+    
     @objc
     private func updateState() {
         isRight = !isRight
-        var image: UIImage?
+        
+        containerView.clearAllDots()
         if isRight {
             AudioPlayer.playMetronomeBeat()
-            image = UIImage(named: "metronomeRight")
+            containerView.fillRightDot()
         } else {
-            image = UIImage(named: "metronomeLeft")
+            containerView.fillLeftDot()
         }
-        metronomeButton.setImage(image, for: .normal)
     }
-
+    
     @objc
     private func increaseTempo() {
         minusButton.isEnabled = true
         stopMetronome()
         setCurrentTempo(increase: true)
     }
-
+    
     @objc
     private func decreaseTempo() {
         plusButton.isEnabled = true
@@ -252,24 +237,15 @@ public class MainViewController: UIViewController {
     
     private func stopMetronome() {
         isMetronomeTurnedOn = false
-        stopAnimation()
-        metronomeTimer?.invalidate()
+        isRight = false
+        playButton.setImage(UIImage(named: "play"), for: .normal)
+        
         animationTimer?.invalidate()
+        containerView.clearAllDots()
         AudioPlayer.metronomeAudioPlayer.stop()
     }
+
     
-    private func stopAnimation() {
-        metronomeButton.setImage(UIImage(named: "metronomeDefault"), for: .normal)
-    }
-    
-
-    // MARK:- Guide
-    @objc
-    private func showGuide() {
-        self.show(GuideViewController(), sender: nil)
-    }
-
-
     // MARK:- Strings
     @objc
     private func playStringIndividually(recognizer: UITapGestureRecognizer) {
@@ -286,7 +262,7 @@ public class MainViewController: UIViewController {
             animateHighlighting(viewToHighlight: secondOpenKeyHighlight, keysCV: secondKeysCV)
         }
     }
-
+    
     @objc
     private func playBothStrings(swipe: UISwipeGestureRecognizer) {
         firstStringDragged(0)
@@ -302,17 +278,17 @@ public class MainViewController: UIViewController {
             viewToHighlight?.alpha = 0
         })
     }
-
+    
     private func firstStringDragged(_ index: Int) {
         AudioPlayer.playFirstStringNote(index)
         animateString(firstString)
     }
-
+    
     private func secondStringDragged(_ index: Int) {
         AudioPlayer.playSecondStringNote(index)
         animateString(secondString)
     }
-
+    
     private func animateString(_ string: UIImageView) {
         let animation = CABasicAnimation(keyPath: "position")
         animation.duration = 0.07
@@ -320,7 +296,7 @@ public class MainViewController: UIViewController {
         animation.autoreverses = true
         animation.fromValue = NSValue(cgPoint: CGPoint(x: string.center.x, y: string.center.y + 1))
         animation.toValue = NSValue(cgPoint: CGPoint(x: string.center.x, y: string.center.y - 1))
-
+        
         string.layer.add(animation, forKey: "position")
     }
 }
@@ -328,13 +304,23 @@ public class MainViewController: UIViewController {
 
 extension MainViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 19
+        if collectionView.tag < 1005 {
+            return 19
+        } else {
+            return icons.count
+        }
     }
 
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "reuseID", for: indexPath)
         cell.backgroundColor = .clear
         cell.isUserInteractionEnabled = false
+        
+        if collectionView.tag == 1005 {
+            (cell as! ImageCollectionViewCell).imageName = icons[indexPath.row]
+            cell.isUserInteractionEnabled = true
+            return cell
+        }
         
         if collectionView.tag == 1004 {
             configureDotCVCell(indexPath.row, cell)
@@ -370,17 +356,23 @@ extension MainViewController: UICollectionViewDelegate, UICollectionViewDataSour
         if collectionView.tag == 1000 {
             firstStringDragged(index)
             animateHighlighting(viewToHighlight: cell?.greenBlurEffectView, keysCV: firstKeysCV)
-            
         } else if collectionView.tag == 1001 {
             secondStringDragged(index)
-            
             animateHighlighting(viewToHighlight: cell?.greenBlurEffectView, keysCV: secondKeysCV)
+        } else if collectionView.tag == 1005 {
+            stopMetronome()
+            self.show(GuideViewController(), sender: nil)
         }
     }
-
+   
     public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let width = (collectionView.frame.width / 19) - 4
-        return CGSize(width: width, height: collectionView.frame.height)
+        let constant = collectionView.frame.width
+        if collectionView.tag < 1005 {
+            let width = (constant / 19) - 4
+            return CGSize(width: width, height: collectionView.frame.height)
+        } else {
+            return CGSize(width: constant, height: constant)
+        }
     }
 }
 
@@ -405,17 +397,17 @@ extension MainViewController {
 
         view.addSubview(dotsCV)
 
-        view.addSubview(dombraImageView)
-        view.addSubview(dombraSwitch)
         view.addSubview(keysHidingSwitch)
-        view.addSubview(dombraStateLabel)
         view.addSubview(keysStateLabel)
 
-        view.addSubview(guideButton)
-        view.addSubview(metronomeButton)
+        view.addSubview(metronomeLabel)
+        view.addSubview(containerView)
         view.addSubview(tempoStateLbl)
+        view.addSubview(playButton)
         view.addSubview(plusButton)
         view.addSubview(minusButton)
+        
+        view.addSubview(iconsCV)
     }
 
     private func setAutoresizingToFalse() {
@@ -485,46 +477,44 @@ extension MainViewController {
             secondString.centerYAnchor.constraint(equalTo: secondKeysCV.centerYAnchor),
             secondString.heightAnchor.constraint(equalTo: firstString.heightAnchor),
 
-            dombraImageView.topAnchor.constraint(equalTo: secondNotesCV.bottomAnchor, constant: 16),
-            dombraImageView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.15),
-            dombraImageView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
-            dombraImageView.widthAnchor.constraint(equalTo: dombraImageView.heightAnchor, multiplier: 3.5),
 
-            dombraSwitch.topAnchor.constraint(equalTo: dombraImageView.bottomAnchor, constant: 8),
-            dombraSwitch.leadingAnchor.constraint(equalTo: dombraImageView.leadingAnchor),
+            keysHidingSwitch.topAnchor.constraint(equalTo: secondNotesCV.bottomAnchor, constant: 16),
+            keysHidingSwitch.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
 
-            keysHidingSwitch.topAnchor.constraint(equalTo: dombraSwitch.bottomAnchor, constant: 8),
-            keysHidingSwitch.leadingAnchor.constraint(equalTo: dombraSwitch.leadingAnchor),
+            keysStateLabel.topAnchor.constraint(equalTo: keysHidingSwitch.bottomAnchor, constant: 8),
+            keysStateLabel.leadingAnchor.constraint(equalTo: keysHidingSwitch.leadingAnchor),
 
-            dombraStateLabel.leadingAnchor.constraint(equalTo: dombraSwitch.trailingAnchor, constant: 8),
-            dombraStateLabel.centerYAnchor.constraint(equalTo: dombraSwitch.centerYAnchor),
-
-            keysStateLabel.centerYAnchor.constraint(equalTo: keysHidingSwitch.centerYAnchor),
-            keysStateLabel.leadingAnchor.constraint(equalTo: dombraStateLabel.leadingAnchor),
-
-            metronomeButton.centerXAnchor.constraint(equalTo: firstKeysCV.centerXAnchor, constant: -32),
-            metronomeButton.topAnchor.constraint(equalTo: dombraImageView.topAnchor),
-            metronomeButton.heightAnchor.constraint(equalTo: keysCVBackground.heightAnchor, multiplier: 0.8),
-            metronomeButton.widthAnchor.constraint(equalTo: metronomeButton.heightAnchor),
-
-            tempoStateLbl.topAnchor.constraint(equalTo: metronomeButton.bottomAnchor, constant: 8),
-            tempoStateLbl.leadingAnchor.constraint(equalTo: metronomeButton.leadingAnchor),
-            tempoStateLbl.trailingAnchor.constraint(equalTo: metronomeButton.trailingAnchor),
+            metronomeLabel.topAnchor.constraint(equalTo: keysHidingSwitch.topAnchor),
+            metronomeLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             
-            plusButton.leadingAnchor.constraint(equalTo: metronomeButton.trailingAnchor),
-            plusButton.topAnchor.constraint(equalTo: metronomeButton.topAnchor),
-            plusButton.heightAnchor.constraint(equalTo: metronomeButton.heightAnchor, multiplier: 0.5, constant: -2),
-            plusButton.widthAnchor.constraint(equalTo: plusButton.heightAnchor),
-
-            minusButton.leadingAnchor.constraint(equalTo: plusButton.leadingAnchor),
-            minusButton.bottomAnchor.constraint(equalTo: metronomeButton.bottomAnchor),
-            minusButton.heightAnchor.constraint(equalTo: plusButton.heightAnchor),
-            minusButton.widthAnchor.constraint(equalTo: minusButton.heightAnchor),
+            containerView.leadingAnchor.constraint(equalTo: metronomeLabel.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: metronomeLabel.trailingAnchor),
+            containerView.topAnchor.constraint(equalTo: metronomeLabel.bottomAnchor, constant: 8),
+            containerView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.1),
             
-            guideButton.leadingAnchor.constraint(equalTo: plusButton.trailingAnchor, constant: 32),
-            guideButton.topAnchor.constraint(equalTo: metronomeButton.topAnchor),
-            guideButton.bottomAnchor.constraint(equalTo: metronomeButton.bottomAnchor),
-            guideButton.widthAnchor.constraint(equalTo: guideButton.heightAnchor),
+            playButton.topAnchor.constraint(equalTo: containerView.bottomAnchor, constant: 8),
+            playButton.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            playButton.widthAnchor.constraint(equalTo: containerView.widthAnchor, multiplier: 0.3, constant: -8),
+            playButton.heightAnchor.constraint(equalTo: playButton.widthAnchor),
+            
+            minusButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            minusButton.topAnchor.constraint(equalTo: playButton.topAnchor),
+            minusButton.heightAnchor.constraint(equalTo: playButton.heightAnchor),
+            minusButton.widthAnchor.constraint(equalTo: playButton.widthAnchor),
+            
+            plusButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            plusButton.widthAnchor.constraint(equalTo: playButton.widthAnchor),
+            plusButton.topAnchor.constraint(equalTo: playButton.topAnchor),
+            plusButton.heightAnchor.constraint(equalTo: playButton.heightAnchor),
+            
+            tempoStateLbl.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 8),
+            tempoStateLbl.leadingAnchor.constraint(equalTo: metronomeLabel.leadingAnchor),
+            tempoStateLbl.trailingAnchor.constraint(equalTo: metronomeLabel.trailingAnchor),
+            
+            iconsCV.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            iconsCV.topAnchor.constraint(equalTo: keysHidingSwitch.topAnchor),
+            iconsCV.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            iconsCV.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.07)
         ])
     }
 }

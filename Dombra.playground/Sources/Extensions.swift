@@ -36,11 +36,12 @@ extension UILabel {
         ])
     }
     
-    public func turnToStateLabel(_ text: String, view: UIView, size multiplier: CGFloat) {
+    public func turnToStateLabel(_ text: String, font size: CGFloat) {
         self.textColor = .white
-        self.font = UIFont(name: "Avenir-Light", size: view.frame.height * multiplier)
+        self.font = UIFont(name: "Avenir-Light", size: size)
         self.textAlignment = .center
         self.text = text
+        self.numberOfLines = 2
     }
 }
 
@@ -67,12 +68,11 @@ extension UIView {
 
 
 // MARK:- Global Functions
-public func turnToKeyCV(vc: UIViewController, tag: Int, CellClass: AnyClass) -> UICollectionView {
+public func turnToKeyCV(vc: UIViewController, tag: Int, CellClass: AnyClass, direction: UICollectionView.ScrollDirection, spacing: CGFloat, topInset: CGFloat) -> UICollectionView {
     let layout = UICollectionViewFlowLayout()
-    layout.scrollDirection = .horizontal
-    layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-    layout.minimumInteritemSpacing = 0
-    layout.minimumLineSpacing = 4
+    layout.scrollDirection = direction
+    layout.sectionInset = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
+    layout.minimumLineSpacing = spacing
     
     let cv = UICollectionView(frame: CGRect.zero, collectionViewLayout: layout)
     cv.register(CellClass, forCellWithReuseIdentifier: "reuseID")
@@ -81,7 +81,8 @@ public func turnToKeyCV(vc: UIViewController, tag: Int, CellClass: AnyClass) -> 
     cv.delegate = vc as? UICollectionViewDelegate
     cv.dataSource = vc as? UICollectionViewDataSource
     cv.tag = tag
-    if tag > 1001 {
+    cv.isUserInteractionEnabled = true
+    if tag > 1001 && tag != 1005 {
         cv.isUserInteractionEnabled = false
     }
     cv.backgroundColor = .clear
